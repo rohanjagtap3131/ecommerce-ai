@@ -1,5 +1,5 @@
 
-const backendDomain = "http://localhost:8000/api"
+const backendDomain =process.env.BACKENDURL;
 const summuryAPI = {
     Signup: {
         url: `${backendDomain}/signup`,
