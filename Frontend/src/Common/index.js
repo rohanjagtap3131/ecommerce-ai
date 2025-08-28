@@ -1,5 +1,5 @@
 
-const backendDomain =process.env.BACKENDURL;
+const backendDomain = import.meta.env.VITE_BACKEND_URL;
 const summuryAPI = {
     Signup: {
         url: `${backendDomain}/signup`,
