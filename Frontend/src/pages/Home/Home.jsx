@@ -7,12 +7,14 @@ import AiChatBot from "../../Components/AiChatBot/AiChatBot";
 export default function Home() {
 
   // ✅ Reload once
-  useEffect(() => {
-    if (!sessionStorage.getItem("reloaded")) {
-      sessionStorage.setItem("reloaded", "true");
-      window.location.reload();
-    }
-  }, []);
+ useEffect(() => {
+  const alreadyReloaded = localStorage.getItem("alreadyReloaded");
+
+  if (!alreadyReloaded) {
+    localStorage.setItem("alreadyReloaded", "true");
+    window.location.reload();
+  }
+}, []);
 
   
   
