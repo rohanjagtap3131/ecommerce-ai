@@ -77,7 +77,7 @@ export default function Login() {
       if (dataapi.success) {
         toast.success(dataapi.message);
         fetchUserDetails();
-         localStorage.setItem("alreadyReloaded", "true");
+           localStorage.setItem("reloadAfterLogin", "true");
         navigate("/",);
       } else {
         toast.error(dataapi.message || "Login failed");

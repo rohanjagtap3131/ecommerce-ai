@@ -6,15 +6,15 @@ import AiChatBot from "../../Components/AiChatBot/AiChatBot";
 
 export default function Home() {
 
-  // ✅ Reload once
+ 
  useEffect(() => {
-  const alreadyReloaded = localStorage.getItem("alreadyReloaded");
+    const shouldReload = localStorage.getItem("reloadAfterLogin");
 
-  if (!alreadyReloaded) {
-    localStorage.setItem("alreadyReloaded", "true");
-    window.location.reload();
-  }
-}, []);
+    if (shouldReload === "true") {
+      localStorage.removeItem("reloadAfterLogin");
+      window.location.reload(); 
+    }
+  }, []);
 
   
   
