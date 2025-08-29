@@ -13,9 +13,9 @@ const userSignInControler = async (req, res) => {
             throw new Error("please provide password")
         }
 
-        const existingUser  = await userModel.findOne({ email });
+        const existingUser = await userModel.findOne({ email });
 
-        if (!existingUser ) {
+        if (!existingUser) {
             return res.status(404).json({
                 message: "User not found",
                 success: false,
@@ -23,12 +23,12 @@ const userSignInControler = async (req, res) => {
             })
         }
 
-        const checkPassword =await bcrypt.compare(password, existingUser.password);
+        const checkPassword = await bcrypt.compare(password, existingUser.password);
 
         console.log("checkPassword", checkPassword);
 
-          if (!checkPassword) {
-          
+        if (!checkPassword) {
+
             return res.status(401).json({
                 message: "Invalid password",
                 success: false,
@@ -36,24 +36,26 @@ const userSignInControler = async (req, res) => {
             });
         }
 
-        
-            const tokenData = {
-                _id: existingUser._id,
-                email: existingUser.email
-            }
-            const token = jwt.sign(tokenData, process.env.TOKEN_SECRET_KEY, { expiresIn: "12h"});
-            res.cookie("token", token, {
-                httpOnly: true,       
-                secure: true,        
-                sameSite: "None",
-                maxAge: 12 * 60*60*1000 
-            });
-            res.status(200).json({
-                message: "Login successfully",
-                data: token,
-                success: true,
-                error: false,
-            });
+
+        const tokenData = {
+            _id: existingUser._id,
+            email: existingUser.email
+        }
+        const token = jwt.sign(tokenData, process.env.TOKEN_SECRET_KEY, { expiresIn: "12h" });
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // ✅ Only use secure cookies in production
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+            maxAge: 12 * 60 * 60 * 1000, // 12 hours
+        });
+
+
+        res.status(200).json({
+            message: "Login successfully",
+            data: token,
+            success: true,
+            error: false,
+        });
 
 
     } catch (error) {
