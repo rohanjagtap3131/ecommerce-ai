@@ -9,7 +9,7 @@ const app = express();
 
 app.use(cors({
     origin:process.env.FRONTEND_URL,
-    credentials :true,
+    credentials:true,
 }))
 app.use(express.json());
 app.use(cookieParser())
@@ -17,7 +17,7 @@ app.use(cookieParser())
 
 app.use("/api",router);
 
-const PORT = 8000;
+const PORT = process.env.PORT||8000;
 
 
 connectDB().then(() => {

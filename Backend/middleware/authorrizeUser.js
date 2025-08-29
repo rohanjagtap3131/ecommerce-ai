@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const authorrizeUser = (req, res, next) => {
     try {
         const token = req.cookies?.token;
-
+        console.log("Cookies received on request:", req.cookies);
         if (!token) {
             return res.status(401).json({
                 message: "User not logged in",
