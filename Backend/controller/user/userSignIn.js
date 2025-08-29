@@ -43,10 +43,10 @@ const userSignInControler = async (req, res) => {
             }
             const token = jwt.sign(tokenData, process.env.TOKEN_SECRET_KEY, { expiresIn: "12h"});
             res.cookie("token", token, {
-                httpOnly: true,       // can't be accessed by JS in the browser
-                secure: false,        // set to true in production with HTTPS
-                sameSite: "strict",   // prevents CSRF
-                maxAge: 12 * 60*60*1000       // 1 hour in ms
+                httpOnly: true,       
+                secure: false,        
+                sameSite: "None",
+                maxAge: 12 * 60*60*1000 
             });
             res.status(200).json({
                 message: "Login successfully",
