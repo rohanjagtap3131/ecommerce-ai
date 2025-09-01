@@ -3,17 +3,28 @@ const addToCartModel = require("../../models/cartProduct");
 const addToCartController = async (req, res) => {
   try {
     const { productId } = req.body;
-    const currentUser = req.userId;   // ✅ use req.userId from middleware
+    const currentUser = req.userId; // set by auth middleware
+
+    // ✅ If not logged in
+    if (!currentUser) {
+      return res.status(401).json({
+        message: "Please login to add products to cart",
+        error: true,
+        success: false,
+        type: "auth",  // 👈 add a type field
+      });
+    }
 
     if (!productId) {
       return res.status(400).json({
         message: "ProductId is required",
         error: true,
         success: false,
+        type: "validation",
       });
     }
 
-    // Check for this product in this user's cart
+    // ✅ Check if product already exists
     const existingCart = await addToCartModel.findOne({ productId, userId: currentUser });
 
     if (existingCart) {
@@ -21,6 +32,7 @@ const addToCartController = async (req, res) => {
         message: "Product already in your cart",
         error: true,
         success: false,
+        type: "duplicate",  // 👈 clear reason
       });
     }
 
@@ -38,6 +50,7 @@ const addToCartController = async (req, res) => {
       data: savedCart,
       success: true,
       error: false,
+      type: "success",
     });
 
   } catch (err) {
@@ -45,6 +58,7 @@ const addToCartController = async (req, res) => {
       message: err.message || "Something went wrong",
       error: true,
       success: false,
+      type: "server",
     });
   }
 };

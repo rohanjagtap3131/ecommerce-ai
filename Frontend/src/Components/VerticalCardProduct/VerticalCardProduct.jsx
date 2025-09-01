@@ -26,21 +26,34 @@ export default function VerticalCardProduct({ category, heading }) {
     }
   };
 
-  const handelAddTOCard = async (e, id) => {
+    const handelAddTOCard = async (e, id) => {
     e.preventDefault();
+    if (loading) return;
+    setLoading(true);
+
     try {
       const res = await addToCart(id);
 
       if (res?.success) {
         fetchCartCount?.();
-
-      } else {
-        toast.error("⚠️ Please login to add products to cart", { position: "top-right" });
+       
+      } else if (res?.error) {
+        // check the type we added in backend
+        if (res.type === "duplicate") {
+          toast.error(res.message, { toastId: "already-in-cart" });
+        } else if (res.type === "auth") {
+          toast.error(res.message, { toastId: "login-required" });
+        } else {
+          toast.error(res.message || "Something went wrong", { toastId: "other-error" });
+        }
       }
     } catch {
-      toast.error("Something went wrong, try again later", { position: "top-right" });
+      toast.error("Server error, try again later", { toastId: "catch-error" });
+    } finally {
+      setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchData();

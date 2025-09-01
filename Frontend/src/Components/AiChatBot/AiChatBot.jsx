@@ -1,15 +1,22 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import summuryAPI from "../../Common/index";
 
 export default function AiChatBot() {
   const [messages, setMessages] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const chatEndRef = useRef(null);
 
   const sendMessage = async () => {
-    if (!input) return;
+    if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, { sender: "user", text: input }]);
+    // Add user message immediately
+    const userMsg = { sender: "user", text: input };
+    setMessages((prev) => [...prev, userMsg]);
+
+    setInput("");
+    setLoading(true);
 
     try {
       const res = await fetch(summuryAPI.aiChat.url, {
@@ -19,20 +26,29 @@ export default function AiChatBot() {
       });
 
       const data = await res.json();
-      setMessages((prev) => [...prev, { sender: "bot", text: data.reply }]);
+
+      // Add bot reply
+      setMessages((prev) => [
+        ...prev,
+        { sender: "bot", text: data.reply || "⚠️ No response" },
+      ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
         { sender: "bot", text: "⚠️ Sorry, something went wrong." },
       ]);
+    } finally {
+      setLoading(false);
     }
-
-    setInput("");
   };
+
+  // Auto scroll to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
   return (
     <div>
-      {/* Floating Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -42,7 +58,6 @@ export default function AiChatBot() {
         </button>
       )}
 
-      {/* Small Popup Chat */}
       {isOpen && (
         <div className="fixed bottom-20 right-6 w-72 h-96 bg-white shadow-xl rounded-xl flex flex-col border border-gray-200 z-40">
           {/* Header */}
@@ -81,6 +96,14 @@ export default function AiChatBot() {
                 </div>
               </div>
             ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="px-3 py-2 rounded-xl bg-gray-200 text-gray-900 rounded-bl-none shadow animate-pulse">
+                  Thinking...
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
           </div>
 
           {/* Input */}
@@ -94,7 +117,8 @@ export default function AiChatBot() {
             />
             <button
               onClick={sendMessage}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-r-lg"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-r-lg disabled:opacity-50"
             >
               Send
             </button>

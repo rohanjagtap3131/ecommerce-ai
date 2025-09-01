@@ -1,11 +1,11 @@
 import summuryAPI from "../../Common";
-import { useState, useEffect,useContext } from "react";
-import { useNavigate , useParams } from "react-router-dom";
+import { useState, useEffect, useContext } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { IoStar, IoStarHalf } from "react-icons/io5";
 import VerticalCardProduct from "../../Components/VerticalCardProduct/VerticalCardProduct";
 import addToCart from "../../helper/addToCart";
 import Context from "../../context";
-import { toast } from "react-toastify"; 
+import { toast } from "react-toastify";
 import AiChatBot from "../../Components/AiChatBot/AiChatBot";
 
 export default function ProductDetails() {
@@ -26,7 +26,7 @@ export default function ProductDetails() {
   const [zoomStyle, setZoomStyle] = useState({});
 
   // Quantity state
-  
+
 
   const context = useContext(Context);
   const fetchCartCount = context?.fetchCartCount;
@@ -47,21 +47,33 @@ export default function ProductDetails() {
     console.log("Product Details", dataResponse?.data);
   };
 
-const handelAddTOCard = async (e, id) => {
-  e.preventDefault();
-  try {
-    const res = await addToCart(id);
+  const handelAddTOCard = async (e, id) => {
+    e.preventDefault();
+    if (loading) return;
+    setLoading(true);
 
-    if (res?.success) {
-      fetchCartCount?.();
-    } else {
-      toast.error("⚠️ Please login to add products to cart", { position: "top-right" });
+    try {
+      const res = await addToCart(id);
+
+      if (res?.success) {
+        fetchCartCount?.();
+       
+      } else if (res?.error) {
+        // check the type we added in backend
+        if (res.type === "duplicate") {
+          toast.error(res.message, { toastId: "already-in-cart" });
+        } else if (res.type === "auth") {
+          toast.error(res.message, { toastId: "login-required" });
+        } else {
+          toast.error(res.message || "Something went wrong", { toastId: "other-error" });
+        }
+      }
+    } catch {
+      toast.error("Server error, try again later", { toastId: "catch-error" });
+    } finally {
+      setLoading(false);
     }
-  } catch {
-    toast.error("Something went wrong, try again later", { position: "top-right" });
-  }
-};
-
+  };
 
   useEffect(() => {
     fatchProductDetails();
@@ -96,7 +108,7 @@ const handelAddTOCard = async (e, id) => {
     );
   }
 
-  const handelByeProduct = async(e,id) =>{
+  const handelByeProduct = async (e, id) => {
     e.preventDefault();
     try {
       const res = await addToCart(id);
@@ -104,12 +116,12 @@ const handelAddTOCard = async (e, id) => {
         navigate("/Cart");
         fetchCartCount?.()
 
-      }else {
-      toast.error("⚠️ Please login to add products to cart", { position: "top-right" });
+      } else {
+        toast.error("⚠️ Please login to add products to cart", { position: "top-right" });
+      }
+    } catch {
+      toast.error("Something went wrong, try again later", { position: "top-right" });
     }
-  } catch {
-    toast.error("Something went wrong, try again later", { position: "top-right" });
-  }
   }
 
   return (
@@ -221,8 +233,8 @@ const handelAddTOCard = async (e, id) => {
               >
                 Add to Cart
               </button>
-              <button className="bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white px-6 py-3 rounded-xl shadow-md w-full sm:w-auto font-semibold transition transform hover:scale-105" 
-              onClick={(e) => handelByeProduct(e, product._id)}>
+              <button className="bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white px-6 py-3 rounded-xl shadow-md w-full sm:w-auto font-semibold transition transform hover:scale-105"
+                onClick={(e) => handelByeProduct(e, product._id)}>
                 Buy Now
               </button>
             </div>
@@ -237,7 +249,7 @@ const handelAddTOCard = async (e, id) => {
         </h3>
         <VerticalCardProduct category={product.category} heading={""} />
       </div>
-      <AiChatBot/>
+      <AiChatBot />
     </div>
   );
 }
