@@ -5,7 +5,7 @@ const initialState = {
 };
 
 export const userSlice = createSlice({
-  name: "user", // ✅ should match how you access in state
+  name: "user",
   initialState,
   reducers: {
     setUserDetails: (state, action) => {
