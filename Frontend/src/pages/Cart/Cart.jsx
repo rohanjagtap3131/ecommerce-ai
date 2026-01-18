@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from "react";
 import { MdDelete } from "react-icons/md";
 import { toast } from "react-toastify";
+
 import Context from "../../context";
 import summuryAPI from "../../Common";
 import displayCurrency from "../../helper/displayCurrency";
@@ -8,24 +9,28 @@ import AiChatBot from "../../Components/AiChatBot/AiChatBot";
 
 export default function Cart() {
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const context = useContext(Context);
-  const fetchCartCount = context?.fetchCartCount;
+  const [pageLoading, setPageLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
 
-  // Fetch cart items
+  const { fetchCartCount } = useContext(Context);
+
+  /* ======================
+     FETCH CART ITEMS
+  ====================== */
   const fetchCartData = async () => {
     try {
-      setLoading(true);
+      setPageLoading(true);
       const res = await fetch(summuryAPI.viewCart.url, {
         method: summuryAPI.viewCart.method,
         credentials: "include",
       });
       const result = await res.json();
-      if (result.success) setData(result.data);
+      if (result.success) setData(result.data || []);
     } catch (err) {
       console.error("Fetch Cart Error:", err);
+      toast.error("Failed to load cart");
     } finally {
-      setLoading(false);
+      setPageLoading(false);
     }
   };
 
@@ -33,9 +38,14 @@ export default function Cart() {
     fetchCartData();
   }, []);
 
-  // Update quantity
+  /* ======================
+     UPDATE QUANTITY
+  ====================== */
   const updateQuantity = async (id, qty) => {
-    if (qty < 1) return;
+    if (qty < 1 || actionLoadingId === id) return;
+
+    setActionLoadingId(id);
+
     try {
       const res = await fetch(summuryAPI.viewCartUpdate(id).url, {
         method: summuryAPI.viewCartUpdate(id).method,
@@ -43,6 +53,7 @@ export default function Cart() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quantity: qty }),
       });
+
       const result = await res.json();
       if (result.success) {
         fetchCartData();
@@ -50,34 +61,52 @@ export default function Cart() {
       }
     } catch (err) {
       console.error("Update Quantity Error:", err);
+      toast.error("Failed to update quantity");
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
-  // Delete item
+  /* ======================
+     DELETE ITEM
+  ====================== */
   const deleteItem = async (id) => {
+    if (actionLoadingId === id) return;
+
+    setActionLoadingId(id);
+
     try {
       const res = await fetch(summuryAPI.viewCartDelete(id).url, {
         method: summuryAPI.viewCartDelete(id).method,
         credentials: "include",
       });
+
       const result = await res.json();
       if (result.success) {
         fetchCartData();
         fetchCartCount?.();
+        toast.success("Item removed");
       }
     } catch (err) {
       console.error("Delete Item Error:", err);
+      toast.error("Failed to remove item");
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
-  // Total calculation
+  /* ======================
+     TOTAL CALCULATION
+  ====================== */
   const totalAmount = data.reduce((acc, item) => {
     const qty = Number(item.quantity) || 1;
     const price = Number(item.productId?.sellingPrice) || 0;
     return acc + qty * price;
   }, 0);
 
-  // Razorpay Checkout
+  /* ======================
+     PLACE ORDER (RAZORPAY)
+  ====================== */
   const handlePlaceOrder = async () => {
     try {
       const res = await fetch(summuryAPI.createOrder.url, {
@@ -86,21 +115,22 @@ export default function Cart() {
         credentials: "include",
         body: JSON.stringify({ totalAmount }),
       });
+
       const { order } = await res.json();
       if (!order) return toast.error("Failed to create order");
 
       const options = {
         key:
-          
-          (import.meta.env?.VITE_RAZORPAY_KEY_ID ||
-            process.env.REACT_APP_RAZORPAY_KEY_ID),
+          import.meta.env?.VITE_RAZORPAY_KEY_ID ||
+          process.env.REACT_APP_RAZORPAY_KEY_ID,
+
         amount: order.amount,
         currency: order.currency,
         name: "My Shop",
         order_id: order.id,
-        handler: async function (response) {
+
+        handler: async (response) => {
           try {
-            
             const verifyRes = await fetch(
               summuryAPI.verifyPayment.url,
               {
@@ -116,18 +146,18 @@ export default function Cart() {
                 }),
               }
             );
+
             const verifyResult = await verifyRes.json();
             if (verifyResult.success) {
-              // toast.success("Payment verified & order placed!");
-              fetchCartData(); // refresh cart
-              fetchCartCount();
-
+              toast.success("Order placed successfully");
+              fetchCartData();
+              fetchCartCount?.();
             } else {
               toast.error("Payment verification failed");
             }
           } catch (err) {
             console.error("Verify Payment Error:", err);
-            toast.error("Something went wrong while verifying payment");
+            toast.error("Payment verification error");
           }
         },
         theme: { color: "#3399cc" },
@@ -141,11 +171,14 @@ export default function Cart() {
     }
   };
 
+  /* ======================
+     UI
+  ====================== */
   return (
     <div className="p-4 max-w-4xl mx-auto">
       <h2 className="text-xl font-bold mb-4">Your Cart</h2>
 
-      {loading ? (
+      {pageLoading ? (
         <p>Loading...</p>
       ) : data.length === 0 ? (
         <p className="text-gray-500">Your cart is empty</p>
@@ -167,53 +200,77 @@ export default function Cart() {
                     alt={product.productName || "Product"}
                     className="w-20 h-20 object-cover rounded-lg"
                   />
+
                   <div>
                     <h3 className="font-semibold">
                       {product.productName || "Unknown Product"}
                     </h3>
-                    <p className="text-gray-600">{displayCurrency(price)}</p>
+                    <p className="text-gray-600">
+                      {displayCurrency(price)}
+                    </p>
+
                     <div className="flex items-center mt-2">
                       <button
                         className="px-2 py-1 border rounded"
-                        onClick={() => updateQuantity(item._id, qty - 1)}
+                        disabled={actionLoadingId === item._id}
+                        onClick={() =>
+                          updateQuantity(item._id, qty - 1)
+                        }
                       >
                         -
                       </button>
+
                       <span className="px-4">{qty}</span>
+
                       <button
                         className="px-2 py-1 border rounded"
-                        onClick={() => updateQuantity(item._id, qty + 1)}
+                        disabled={actionLoadingId === item._id}
+                        onClick={() =>
+                          updateQuantity(item._id, qty + 1)
+                        }
                       >
                         +
                       </button>
                     </div>
                   </div>
                 </div>
+
                 <div className="flex flex-col items-end">
                   <button
                     className="text-red-500"
+                    disabled={actionLoadingId === item._id}
                     onClick={() => deleteItem(item._id)}
                   >
                     <MdDelete size={24} />
                   </button>
-                  <p className="mt-2 font-bold">{displayCurrency(qty * price)}</p>
+
+                  <p className="mt-2 font-bold">
+                    {displayCurrency(qty * price)}
+                  </p>
                 </div>
               </div>
             );
           })}
 
+          {/* ORDER SUMMARY */}
           <div className="bg-white p-4 shadow rounded-lg">
             <h3 className="font-semibold text-lg mb-2">Order Summary</h3>
+
             <p className="flex justify-between">
               <span>Total Items:</span>
               <span>
-                {data.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0)}
+                {data.reduce(
+                  (acc, item) => acc + (Number(item.quantity) || 1),
+                  0
+                )}
               </span>
             </p>
+
             <p className="flex justify-between font-bold">
               <span>Total Amount:</span>
               <span>{displayCurrency(totalAmount)}</span>
             </p>
+
             <button
               className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
               onClick={handlePlaceOrder}
@@ -223,7 +280,8 @@ export default function Cart() {
           </div>
         </div>
       )}
-      <AiChatBot/>
+
+      <AiChatBot />
     </div>
   );
 }

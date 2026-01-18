@@ -53,7 +53,7 @@ export default function Layout() {
     useEffect(() => {
         fetchUserDetails();
         fetchCartCount();
-    }, []);
+    }, [cartCount]);
 
     return (
         <div>
